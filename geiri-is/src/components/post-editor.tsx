@@ -51,6 +51,7 @@ export function PostEditor(props: Props) {
   const [message, setMessage] = useState<string | null>(null);
 
   const canPublish = props.mode === "edit";
+  const previewSlug = (slug.trim() || (props.mode === "edit" ? props.post.slug : "")).trim();
 
   async function save() {
     setMessage(null);
@@ -196,6 +197,16 @@ export function PostEditor(props: Props) {
         >
           {busy ? "Working…" : "Save"}
         </button>
+        {props.mode === "edit" && previewSlug ? (
+          <a
+            href={`/blog/${encodeURIComponent(previewSlug)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-white/20 dark:bg-black dark:hover:bg-white/5"
+          >
+            Preview
+          </a>
+        ) : null}
         {canPublish ? (
           <button
             type="button"
