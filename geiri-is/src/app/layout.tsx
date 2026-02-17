@@ -41,7 +41,7 @@ export default async function RootLayout({
                 </Link>
               </nav>
               {principal?.userDetails && highestRole ? (
-                <span className="hidden text-xs text-zinc-500 dark:text-zinc-400 sm:inline">
+                <span className="max-w-56 truncate text-xs text-zinc-500 dark:text-zinc-400">
                   {principal.userDetails} ({highestRole})
                 </span>
               ) : null}
