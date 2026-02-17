@@ -7,16 +7,34 @@ export type SwaClientPrincipal = {
   userRoles: string[];
 };
 
-export function getSwaClientPrincipal(req: NextRequest): SwaClientPrincipal | null {
-  const encoded = req.headers.get("x-ms-client-principal");
-  if (!encoded) return null;
+type HeaderBag = {
+  get(name: string): string | null;
+};
 
+function decodeSwaClientPrincipal(encoded: string): SwaClientPrincipal | null {
   try {
     const decodedJson = Buffer.from(encoded, "base64").toString("utf8");
     return JSON.parse(decodedJson) as SwaClientPrincipal;
   } catch {
     return null;
   }
+}
+
+export function getSwaClientPrincipalFromHeaders(headers: HeaderBag): SwaClientPrincipal | null {
+  const encoded = headers.get("x-ms-client-principal");
+  if (!encoded) return null;
+  return decodeSwaClientPrincipal(encoded);
+}
+
+export function getHighestRole(userRoles: string[] | null | undefined): "admin" | "authenticated" | null {
+  if (!userRoles || userRoles.length === 0) return null;
+  if (userRoles.includes("admin")) return "admin";
+  if (userRoles.includes("authenticated")) return "authenticated";
+  return null;
+}
+
+export function getSwaClientPrincipal(req: NextRequest): SwaClientPrincipal | null {
+  return getSwaClientPrincipalFromHeaders(req.headers);
 }
 
 export function isAdminRequest(req: NextRequest): boolean {

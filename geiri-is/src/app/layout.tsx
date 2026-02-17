@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import "./globals.css";
+
+import { getHighestRole, getSwaClientPrincipalFromHeaders } from "@/lib/swa-auth";
 
 export const metadata: Metadata = {
   title: "Geiri.is",
   description: "CV and blog posts about what’s new in Teams, Intune, and Entra.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const principal = getSwaClientPrincipalFromHeaders(await headers());
+  const highestRole = getHighestRole(principal?.userRoles);
+
   return (
     <html lang="en">
       <body
@@ -22,17 +28,24 @@ export default function RootLayout({
             <Link href="/" className="font-semibold tracking-tight">
               Geiri.is
             </Link>
-            <nav className="flex items-center gap-4 text-sm text-zinc-700 dark:text-zinc-200">
-              <Link href="/cv" className="hover:underline">
-                CV
-              </Link>
-              <Link href="/blog" className="hover:underline">
-                Blog
-              </Link>
-              <Link href="/admin" className="hover:underline">
-                Admin
-              </Link>
-            </nav>
+            <div className="flex items-center gap-4">
+              <nav className="flex items-center gap-4 text-sm text-zinc-700 dark:text-zinc-200">
+                <Link href="/cv" className="hover:underline">
+                  CV
+                </Link>
+                <Link href="/blog" className="hover:underline">
+                  Blog
+                </Link>
+                <Link href="/admin" className="hover:underline">
+                  Admin
+                </Link>
+              </nav>
+              {principal?.userDetails && highestRole ? (
+                <span className="hidden text-xs text-zinc-500 dark:text-zinc-400 sm:inline">
+                  {principal.userDetails} ({highestRole})
+                </span>
+              ) : null}
+            </div>
           </div>
         </header>
         <main className="mx-auto max-w-5xl px-4 py-10">{children}</main>
