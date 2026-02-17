@@ -156,6 +156,18 @@ export async function getPublishedPostBySlug(slug: string): Promise<BlogPost | n
   return null;
 }
 
+export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
+  if (cosmosEnabled()) {
+    return getBySlugFromCosmos(slug, false);
+  }
+
+  seedInMemoryOnce();
+  for (const post of inMemory.posts.values()) {
+    if (post.slug === slug) return post;
+  }
+  return null;
+}
+
 export async function listAdminPosts(): Promise<BlogPost[]> {
   if (cosmosEnabled()) {
     return listFromCosmos("1=1", [], "ORDER BY c.updatedAt DESC");

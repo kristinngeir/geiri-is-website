@@ -2,8 +2,32 @@ import Link from "next/link";
 
 import { listPublishedPosts } from "@/lib/posts";
 
-export default async function BlogIndexPage() {
+type Props = {
+  searchParams?: Promise<{ q?: string }>;
+};
+
+function matchesQuery(post: Awaited<ReturnType<typeof listPublishedPosts>>[number], query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const haystack = [
+    post.title,
+    post.summary,
+    post.slug,
+    post.productArea,
+    ...(post.tags || []),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(q);
+}
+
+export default async function BlogIndexPage({ searchParams }: Props) {
   const posts = await listPublishedPosts();
+  const resolvedSearchParams = await searchParams;
+  const q = (resolvedSearchParams?.q || "").trim();
+  const filtered = q ? posts.filter((p) => matchesQuery(p, q)) : posts;
 
   return (
     <div className="space-y-6">
@@ -14,13 +38,28 @@ export default async function BlogIndexPage() {
         </p>
       </div>
 
+      <form action="/blog" method="get" className="flex items-center gap-2">
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Search posts…"
+          className="w-full max-w-md rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400 dark:border-white/20 dark:bg-black"
+        />
+        <button
+          type="submit"
+          className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-white/20 dark:bg-black dark:hover:bg-white/5"
+        >
+          Search
+        </button>
+      </form>
+
       <div className="space-y-3">
-        {posts.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="rounded-lg border border-zinc-200 bg-white p-5 text-sm text-zinc-700 dark:border-white/10 dark:bg-black dark:text-zinc-300">
-            No posts yet.
+            {q ? "No matching posts." : "No posts yet."}
           </div>
         ) : (
-          posts.map((post) => (
+          filtered.map((post) => (
             <article
               key={post.id}
               className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-black"
