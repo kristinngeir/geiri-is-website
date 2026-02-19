@@ -135,7 +135,16 @@ async function makeUniqueSlug(baseSlug: string, excludingId?: string) {
 
 export async function listPublishedPosts(): Promise<BlogPost[]> {
   if (cosmosEnabled()) {
-    return listFromCosmos("c.status = \"published\"", [], "ORDER BY c.publishedAt DESC");
+    try {
+      return await listFromCosmos(
+        'c.status = "published"',
+        [],
+        "ORDER BY c.publishedAt DESC"
+      );
+    } catch (err) {
+      console.error("[posts] listPublishedPosts Cosmos query failed", err);
+      return [];
+    }
   }
 
   seedInMemoryOnce();
@@ -146,7 +155,12 @@ export async function listPublishedPosts(): Promise<BlogPost[]> {
 
 export async function getPublishedPostBySlug(slug: string): Promise<BlogPost | null> {
   if (cosmosEnabled()) {
-    return getBySlugFromCosmos(slug, true);
+    try {
+      return await getBySlugFromCosmos(slug, true);
+    } catch (err) {
+      console.error("[posts] getPublishedPostBySlug Cosmos query failed", err);
+      return null;
+    }
   }
 
   seedInMemoryOnce();
@@ -158,7 +172,12 @@ export async function getPublishedPostBySlug(slug: string): Promise<BlogPost | n
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   if (cosmosEnabled()) {
-    return getBySlugFromCosmos(slug, false);
+    try {
+      return await getBySlugFromCosmos(slug, false);
+    } catch (err) {
+      console.error("[posts] getPostBySlug Cosmos query failed", err);
+      return null;
+    }
   }
 
   seedInMemoryOnce();
@@ -170,7 +189,12 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
 
 export async function listAdminPosts(): Promise<BlogPost[]> {
   if (cosmosEnabled()) {
-    return listFromCosmos("1=1", [], "ORDER BY c.updatedAt DESC");
+    try {
+      return await listFromCosmos("1=1", [], "ORDER BY c.updatedAt DESC");
+    } catch (err) {
+      console.error("[posts] listAdminPosts Cosmos query failed", err);
+      return [];
+    }
   }
 
   seedInMemoryOnce();
@@ -179,7 +203,12 @@ export async function listAdminPosts(): Promise<BlogPost[]> {
 
 export async function getPostById(id: string): Promise<BlogPost | null> {
   if (cosmosEnabled()) {
-    return getByIdFromCosmos(id);
+    try {
+      return await getByIdFromCosmos(id);
+    } catch (err) {
+      console.error("[posts] getPostById Cosmos read failed", err);
+      return null;
+    }
   }
 
   seedInMemoryOnce();
