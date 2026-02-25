@@ -8,14 +8,18 @@ export type BlogPost = {
   id: string;
   slug: string;
   title: string;
+  titleEn?: string | null;
   summary: string;
   bodyMarkdown: string;
+  sourceUrl?: string | null;
   tags: string[];
   productArea: ProductArea;
   status: PostStatus;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  shareToLinkedIn?: boolean | null;
+  linkedInText?: string | null;
   linkedInPostUrn?: string | null;
 };
 

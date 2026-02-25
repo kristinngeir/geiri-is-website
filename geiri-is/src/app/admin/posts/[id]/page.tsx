@@ -4,11 +4,11 @@ import { PostEditor } from "@/components/post-editor";
 import { getPostById } from "@/lib/posts";
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export default async function EditPostPage({ params }: Props) {
-  const { id } = params;
+  const { id } = await params;
   const post = await getPostById(id);
   if (!post) notFound();
 

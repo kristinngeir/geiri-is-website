@@ -93,7 +93,15 @@ Env vars:
 - `COSMOS_POSTS_CONTAINER_ID` (default: `posts`)
 - `COSMOS_SECRETS_CONTAINER_ID` (default: `secrets`)
 
-If Cosmos is not configured, the app uses a tiny in-memory data store so public blog pages still render.
+If Cosmos is not configured, the app uses a local file-backed fallback store at `%TEMP%/geiri-is/posts-fallback.json` so admin API writes and public blog reads stay consistent in local development.
+
+You can override that path with:
+
+- `POSTS_FALLBACK_FILE`
+
+Admin supports deleting posts via:
+
+- `DELETE /api/admin/posts/[id]`
 
 ### Azure Static Web Apps + Entra ID admin
 

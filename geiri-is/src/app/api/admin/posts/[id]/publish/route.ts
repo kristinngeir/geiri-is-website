@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 
-import { publishPost, setLinkedInPostUrn } from "@/lib/posts";
+import { publishPost } from "@/lib/posts";
 import { requireAdmin } from "@/lib/swa-auth";
-import { maybePostToLinkedIn } from "@/lib/linkedin";
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -15,14 +14,7 @@ export async function POST(req: NextRequest, ctx: Context) {
   const { id } = await ctx.params;
 
   try {
-    let post = await publishPost(id);
-
-    if (!post.linkedInPostUrn) {
-      const linkedInPostUrn = await maybePostToLinkedIn(post);
-      if (linkedInPostUrn) {
-        post = await setLinkedInPostUrn(post.id, linkedInPostUrn);
-      }
-    }
+    const post = await publishPost(id);
 
     return Response.json({ post });
   } catch (e) {

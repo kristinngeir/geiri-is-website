@@ -31,17 +31,17 @@ function setIsDark(isDark: boolean) {
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme | null>(null);
+  const [theme, setTheme] = useState<Theme | null>(() => {
+    if (typeof window === "undefined") return null;
+    const stored = getStoredTheme();
+    if (stored) return stored;
+    return getIsDark() ? "dark" : "light";
+  });
 
   useEffect(() => {
-    const stored = getStoredTheme();
-    if (stored) {
-      setTheme(stored);
-      return;
-    }
-
-    setTheme(getIsDark() ? "dark" : "light");
-  }, []);
+    if (!theme) return;
+    setIsDark(theme === "dark");
+  }, [theme]);
 
   if (!theme) return null;
 

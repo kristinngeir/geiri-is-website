@@ -14,14 +14,15 @@ function linkedinEnabled() {
   return Boolean(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET);
 }
 
-function getRedirectUri() {
+function getRedirectUri(override?: string | null) {
+  if (override) return override;
   const configured = process.env.LINKEDIN_REDIRECT_URI;
   if (configured) return configured;
   return `${getSiteUrl()}/api/admin/linkedin/callback`;
 }
 
-export function buildLinkedInAuthUrl(state: string) {
-  const redirectUri = getRedirectUri();
+export function buildLinkedInAuthUrl(state: string, redirectUriOverride?: string | null) {
+  const redirectUri = getRedirectUri(redirectUriOverride);
   const clientId = requireEnv("LINKEDIN_CLIENT_ID");
 
   const params = new URLSearchParams({
@@ -35,8 +36,8 @@ export function buildLinkedInAuthUrl(state: string) {
   return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
 }
 
-async function exchangeCodeForAccessToken(code: string) {
-  const redirectUri = getRedirectUri();
+async function exchangeCodeForAccessToken(code: string, redirectUriOverride?: string | null) {
+  const redirectUri = getRedirectUri(redirectUriOverride);
   const clientId = requireEnv("LINKEDIN_CLIENT_ID");
   const clientSecret = requireEnv("LINKEDIN_CLIENT_SECRET");
 
@@ -91,12 +92,15 @@ async function fetchLinkedInMemberId(accessToken: string) {
   return json.id;
 }
 
-export async function completeLinkedInOAuth(code: string): Promise<void> {
+export async function completeLinkedInOAuth(
+  code: string,
+  redirectUriOverride?: string | null
+): Promise<void> {
   if (!linkedinEnabled()) {
     throw new Error("LinkedIn is not configured. Set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET.");
   }
 
-  const { accessToken, expiresAt } = await exchangeCodeForAccessToken(code);
+  const { accessToken, expiresAt } = await exchangeCodeForAccessToken(code, redirectUriOverride);
   const memberId = await fetchLinkedInMemberId(accessToken);
   const now = new Date().toISOString();
 
@@ -117,6 +121,33 @@ export async function completeLinkedInOAuth(code: string): Promise<void> {
 function isExpired(expiresAt: string | null) {
   if (!expiresAt) return false;
   return Date.now() > new Date(expiresAt).getTime();
+}
+
+export async function postToLinkedIn(input: {
+  text: string;
+  url: string;
+  title: string;
+}): Promise<string> {
+  const secret = await getLinkedInAuthSecret();
+  if (!secret) {
+    throw new Error("LinkedIn is not connected. Connect it from the admin page first.");
+  }
+  if (isExpired(secret.expiresAt)) {
+    throw new Error("LinkedIn connection expired. Re-connect your LinkedIn account.");
+  }
+
+  const text = input.text.trim();
+  if (!text) {
+    throw new Error("LinkedIn text is empty.");
+  }
+
+  return createLinkedInUgcPost({
+    accessToken: secret.accessToken,
+    memberId: secret.memberId,
+    text,
+    url: input.url,
+    title: input.title,
+  });
 }
 
 function hashtagsForProductArea(productArea: BlogPost["productArea"]) {
@@ -187,19 +218,13 @@ export async function maybePostToLinkedIn(post: BlogPost): Promise<string | null
     return null;
   }
 
-  const secret = await getLinkedInAuthSecret();
-  if (!secret) return null;
-  if (isExpired(secret.expiresAt)) return null;
-
   const url = `${getSiteUrl()}/blog/${post.slug}`;
   const tags = hashtagsForProductArea(post.productArea).join(" ");
   const text = `${post.title}\n\n${url}\n\n${tags}`.trim();
 
-  return createLinkedInUgcPost({
-    accessToken: secret.accessToken,
-    memberId: secret.memberId,
-    text,
-    url,
-    title: post.title,
-  });
+  try {
+    return await postToLinkedIn({ text, url, title: post.title });
+  } catch {
+    return null;
+  }
 }

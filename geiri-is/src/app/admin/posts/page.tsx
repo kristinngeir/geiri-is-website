@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { PostListDeleteButton } from "@/components/post-list-delete-button";
 import { listAdminPosts } from "@/lib/posts";
 
 export default async function AdminPostsPage() {
@@ -59,6 +60,7 @@ export default async function AdminPostsPage() {
                     View
                   </Link>
                 ) : null}
+                <PostListDeleteButton postId={post.id} />
               </div>
             </div>
           ))

@@ -6,11 +6,11 @@ import { getPostBySlug, getPublishedPostBySlug } from "@/lib/posts";
 import { getSwaClientPrincipalFromHeaders } from "@/lib/swa-auth";
 
 type Props = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 export default async function BlogPostPage({ params }: Props) {
-  const { slug } = params;
+  const { slug } = await params;
   const principal = getSwaClientPrincipalFromHeaders(await headers());
   const isAdmin = principal?.userRoles?.includes("admin") ?? false;
 

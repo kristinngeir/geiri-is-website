@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { getPostById, updatePost, updatePostInputSchema } from "@/lib/posts";
+import { deletePost, getPostById, updatePost, updatePostInputSchema } from "@/lib/posts";
 import { requireAdmin } from "@/lib/swa-auth";
 
 type Context = {
@@ -32,6 +32,25 @@ export async function PATCH(req: NextRequest, ctx: Context) {
   } catch (e) {
     return Response.json(
       { error: e instanceof Error ? e.message : "Invalid request" },
+      { status: 400 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest, ctx: Context) {
+  const forbidden = requireAdmin(req);
+  if (forbidden) return forbidden;
+
+  const { id } = await ctx.params;
+  try {
+    const deleted = await deletePost(id);
+    if (!deleted) {
+      return Response.json({ error: "not_found" }, { status: 404 });
+    }
+    return Response.json({ ok: true });
+  } catch (e) {
+    return Response.json(
+      { error: e instanceof Error ? e.message : "Delete failed" },
       { status: 400 }
     );
   }

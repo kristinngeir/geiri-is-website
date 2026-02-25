@@ -18,11 +18,15 @@ type Props =
 
 type SavePayload = {
   title: string;
+  titleEn?: string;
   slug?: string;
   summary: string;
   bodyMarkdown: string;
+  sourceUrl?: string;
   productArea: ProductArea;
   tags: string[];
+  shareToLinkedIn?: boolean;
+  linkedInText?: string;
 };
 
 function parseTags(input: string) {
@@ -41,11 +45,15 @@ export function PostEditor(props: Props) {
   }, [props]);
 
   const [title, setTitle] = useState(initial?.title ?? "");
+  const [titleEn, setTitleEn] = useState(initial?.titleEn ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [summary, setSummary] = useState(initial?.summary ?? "");
   const [bodyMarkdown, setBodyMarkdown] = useState(initial?.bodyMarkdown ?? "");
+  const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
   const [productArea, setProductArea] = useState<ProductArea>(initial?.productArea ?? "teams");
   const [tagsText, setTagsText] = useState((initial?.tags ?? []).join(", "));
+  const [shareToLinkedIn, setShareToLinkedIn] = useState(Boolean(initial?.shareToLinkedIn));
+  const [linkedInText, setLinkedInText] = useState(initial?.linkedInText ?? "");
 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -59,11 +67,15 @@ export function PostEditor(props: Props) {
     try {
       const payload: SavePayload = {
         title,
+        titleEn: titleEn.trim() || undefined,
         slug: slug.trim() || undefined,
         summary,
         bodyMarkdown,
+        sourceUrl: sourceUrl.trim() || undefined,
         productArea,
         tags: parseTags(tagsText),
+        shareToLinkedIn,
+        linkedInText,
       };
 
       if (props.mode === "new") {
@@ -112,7 +124,52 @@ export function PostEditor(props: Props) {
         throw new Error(json.error || `Publish failed (${res.status})`);
       }
       router.refresh();
-      setMessage(json.post.linkedInPostUrn ? "Published (and posted to LinkedIn)." : "Published.");
+      setMessage("Published.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function postToLinkedIn() {
+    if (props.mode !== "edit") return;
+    setMessage(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${props.post.id}/linkedin`, {
+        method: "POST",
+      });
+      const json = (await res.json()) as { post?: BlogPost; error?: string };
+      if (!res.ok || !json.post) {
+        throw new Error(json.error || `LinkedIn post failed (${res.status})`);
+      }
+      router.refresh();
+      setMessage("Posted to LinkedIn.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removePost() {
+    if (props.mode !== "edit") return;
+    const confirmed = window.confirm("Delete this post?");
+    if (!confirmed) return;
+
+    setMessage(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${props.post.id}`, {
+        method: "DELETE",
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || `Delete failed (${res.status})`);
+      }
+      router.replace("/admin/posts");
+      router.refresh();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : String(e));
     } finally {
@@ -132,10 +189,27 @@ export function PostEditor(props: Props) {
           />
         </label>
         <label className="space-y-1">
+          <div className="text-sm font-medium">Title (English)</div>
+          <input
+            value={titleEn}
+            onChange={(e) => setTitleEn(e.target.value)}
+            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400 dark:border-white/20 dark:bg-black"
+          />
+        </label>
+        <label className="space-y-1">
           <div className="text-sm font-medium">Slug (optional)</div>
           <input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
+            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400 dark:border-white/20 dark:bg-black"
+          />
+        </label>
+        <label className="space-y-1">
+          <div className="text-sm font-medium">Source URL (optional)</div>
+          <input
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://..."
             className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400 dark:border-white/20 dark:bg-black"
           />
         </label>
@@ -165,6 +239,24 @@ export function PostEditor(props: Props) {
           <input
             value={tagsText}
             onChange={(e) => setTagsText(e.target.value)}
+            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400 dark:border-white/20 dark:bg-black"
+          />
+        </label>
+        <label className="flex items-center gap-2 sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={shareToLinkedIn}
+            onChange={(e) => setShareToLinkedIn(e.target.checked)}
+            className="h-4 w-4"
+          />
+          <div className="text-sm font-medium">Share to LinkedIn (opt-in)</div>
+        </label>
+        <label className="space-y-1 sm:col-span-2">
+          <div className="text-sm font-medium">LinkedIn post text</div>
+          <textarea
+            value={linkedInText}
+            onChange={(e) => setLinkedInText(e.target.value)}
+            rows={6}
             className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400 dark:border-white/20 dark:bg-black"
           />
         </label>
@@ -215,6 +307,32 @@ export function PostEditor(props: Props) {
             className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-60 dark:border-white/20 dark:bg-black dark:hover:bg-white/5"
           >
             Publish
+          </button>
+        ) : null}
+        {props.mode === "edit" ? (
+          <button
+            type="button"
+            disabled={
+              busy ||
+              props.post.status !== "published" ||
+              !shareToLinkedIn ||
+              !linkedInText.trim() ||
+              Boolean(props.post.linkedInPostUrn)
+            }
+            onClick={postToLinkedIn}
+            className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-60 dark:border-white/20 dark:bg-black dark:hover:bg-white/5"
+          >
+            {props.post.linkedInPostUrn ? "Posted to LinkedIn" : "Post to LinkedIn"}
+          </button>
+        ) : null}
+        {props.mode === "edit" ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={removePost}
+            className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-60 dark:border-white/20 dark:bg-black dark:hover:bg-white/5"
+          >
+            Delete
           </button>
         ) : null}
         {message ? (

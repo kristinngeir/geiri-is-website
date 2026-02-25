@@ -12,5 +12,13 @@ export async function GET(req: NextRequest) {
     return Response.json({ connected: false });
   }
 
-  return Response.json({ connected: true, expiresAt: secret.expiresAt ?? null });
+  const expiresAt = secret.expiresAt ?? null;
+  if (expiresAt) {
+    const ms = new Date(expiresAt).getTime();
+    if (!Number.isNaN(ms) && Date.now() > ms) {
+      return Response.json({ connected: false });
+    }
+  }
+
+  return Response.json({ connected: true, expiresAt });
 }
